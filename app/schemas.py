@@ -18,6 +18,15 @@ class Order(BaseModel):
     trades: List[Dict]
     fee: Optional[Dict]
 
+
+class OrderCreateRequest(BaseModel):
+    pair: str  # "ETH/BTC"
+    side: str  # "buy" or "sell"
+    type: str  # "market" or "limit"
+    amount: float  # Amount to trade in base currency
+    price: Optional[float]  # Limit price in quote currency
+
+
 class Balance(BaseModel):
     timestamp: int
     free: Dict[str, float]

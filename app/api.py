@@ -3,7 +3,7 @@ from typing import List, Optional, Dict
 from starlette.requests import Request
 from fastapi import APIRouter
 
-from app.schemas import Order, Balance, Ticker, Leverage, Trade
+from app.schemas import Order, Balance, Ticker, Leverage, Trade, OrderCreateRequest
 
 api_router = APIRouter()
 
@@ -24,7 +24,12 @@ def get_hardcoded_order(**kwargs):
         "timeInForce": None,
         "average": None,
         "trades": [],
-        "fee": None
+        "fee": {
+            "currency": "BTC",
+            "cost": 0.0009,
+            "rate": 0.002,
+
+        }
     }
     order_data.update(kwargs)
     return Order(**order_data)
@@ -40,8 +45,8 @@ def fetch_order(request: Request, id: str, pair: Optional[str] = None):
     return get_hardcoded_order()
 
 @api_router.post("/order", response_model=Order)
-def create_order(order: Dict):
-    return get_hardcoded_order(**order)
+def create_order(payload: OrderCreateRequest):
+    return get_hardcoded_order(**payload.model_dump())
 
 
 @api_router.delete("/order", response_model=Order)
@@ -174,3 +179,4 @@ def fetch_trades(symbol: Optional[str] = None, order_id: Optional[str] = None, s
             ]
         )
     ]
+

@@ -1,0 +1,620 @@
+openapi: 3.0.0
+info:
+  title: GAINS HTTP API
+  version: "1.0.0"
+  description: API for Freqtrade/CCXT compatibility
+
+paths:
+  /markets:  # whatever path
+    get:
+      summary: Get markets information
+      operationId: fetchMarkets
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Market'
+
+  /order:
+    get:
+      summary: Fetch a single order
+      operationId: fetchOrder
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "The unique ID of the order"
+        - name: pair
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Trading pair symbol, if order IDs are unique per pair"
+      responses:
+        "200":
+          description: A single order object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    delete:
+      summary: Cancel an order
+      operationId: cancelOrder
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "The unique ID of the order to cancel"
+        - name: pair
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Trading pair symbol, if order IDs are unique per pair"
+      responses:
+        "200":
+          description: Canceled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    post:
+      summary: Create an order
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pair, side, type, amount]
+              properties:
+                pair:
+                  type: string
+                  description: "Trading pair symbol, e.g., 'ETH/BTC'"
+                side:
+                  type: string
+                  enum: [buy, sell]
+                  description: "'buy' or 'sell'"
+                type:
+                  type: string
+                  enum: [market, limit]
+                  description: "'market' or 'limit'"
+                amount:
+                  type: number
+                  description: "Amount to trade in base currency"
+                price:
+                  type: number
+                  description: "Limit price in quote currency; ignored for market orders"
+      responses:
+        "200":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /orders:
+    get:
+      summary: Fetch multiple orders
+      operationId: fetchOrders
+      parameters:
+        - name: pair
+          in: query
+          schema:
+            type: string
+          description: "Filter by trading pair"
+        - name: since
+          in: query
+          schema:
+            type: integer
+          description: "Filter orders after a specific Unix timestamp in milliseconds"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: "Maximum number of most recent orders to fetch"
+      responses:
+        "200":
+          description: List of order objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /balance:
+    get:
+      summary: Fetch balance
+      operationId: fetchBalance
+      responses:
+        "200":
+          description: Balance information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+
+  /ohlcv:
+    get:
+      summary: Fetch OHLCV data
+      operationId: fetchOhlcv
+      parameters:
+        - name: pair
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Trading pair symbol, e.g., 'ETH/BTC'"
+        - name: timeframe
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Timeframe, e.g., '1m', '5m', '1h', '1d'"
+        - name: since
+          in: query
+          schema:
+            type: integer
+          description: "Fetch data after a specific Unix timestamp"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: "Number of most recent candles to fetch"
+      responses:
+        "200":
+          description: OHLCV data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+                  example: [
+                    [1504541580000, 4235.4, 4240.6, 4230.0, 4230.7, 37.72941911],
+                    [1504541640000, 4230.7, 4235.0, 4225.0, 4231.5, 25.93211433],
+                    [1504541700000, 4231.5, 4240.0, 4230.0, 4235.5, 42.37478112]
+                  ]
+
+  /ticker:
+    get:
+      summary: Fetch ticker information
+      operationId: fetchTicker
+      parameters:
+        - name: pair
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Trading pair symbol, e.g., 'ETH/BTC'"
+      responses:
+        "200":
+          description: Ticker information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticker'
+
+  /leverage_tiers:
+    get:
+      summary: Fetch leverage tiers
+      operationId: fetchLeverageTiers
+      responses:
+        "200":
+          description: Leverage tiers information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeverageTiers'
+
+  /leverage:
+    post:
+      summary: Set leverage
+      operationId: setLeverage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pair, leverage]
+              properties:
+                pair:
+                  type: string
+                  description: "Trading pair symbol, e.g., 'BTC/USDT'"
+                leverage:
+                  type: integer
+                  description: "Desired leverage level"
+                long_leverage:
+                  type: integer
+                  description: "Leverage for long positions (optional)"
+                short_leverage:
+                  type: integer
+                  description: "Leverage for short positions (optional)"
+      responses:
+        "200":
+          description: Leverage settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leverage'
+
+  /trades:
+    get:
+      summary: Fetch trades
+      operationId: fetchMyTrades
+      parameters:
+        - name: symbol
+          in: query
+          schema:
+            type: string
+          description: "Trading pair symbol, e.g., 'ETH/BTC'"
+        - name: order_id
+          in: query
+          schema:
+            type: string
+          description: "Filter trades for a specific order"
+        - name: since
+          in: query
+          schema:
+            type: integer
+          description: "Fetch trades after a specific Unix timestamp"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: "Number of most recent trades to fetch"
+      responses:
+        "200":
+          description: List of trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trade'
+
+components:
+  schemas:
+    Market:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'btcusd'
+          description: string literal for referencing within an exchange
+        symbol:
+          type: string
+          example: 'BTC/USDT'
+          description: uppercase string literal of a pair of currencies
+        base:
+          type: string
+          example: 'BTC'
+          description: uppercase string, unified base currency code, 3 or more letters
+        baseId:
+          type: string
+          example: '1'
+          description: any string, exchange-specific base currency id
+        quote:
+          type: string
+          example: 'USDT'
+          description: uppercase string, unified quote currency code, 3 or more letters
+        quoteId:
+          type: string
+          example: '2'
+          description: any string, exchange-specific quote currency id
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Order ID, e.g., '12345-67890:09876/54321'"
+          example: "12345-67890:09876/54321"
+        timestamp:
+          type: integer
+          description: "Order placing/opening Unix timestamp in milliseconds"
+          example: 1502962946216
+        status:
+          type: string
+          description: "Order status, e.g., 'open', 'closed', 'canceled'"
+          example: "open"
+        symbol:
+          type: string
+          description: "Symbol for the trading pair, e.g., 'ETH/BTC'"
+          example: "ETH/BTC"
+        type:
+          type: string
+          description: "Order type, e.g., 'market', 'limit'"
+          example: "limit"
+        timeInForce:
+          type: string
+          description: "'GTC', 'IOC', 'FOK', 'PO'"
+          example: "GTC"
+        side:
+          type: string
+          description: "'buy' or 'sell'"
+          example: "buy"
+        price:
+          type: number
+          description: "Price in quote currency (empty for market orders)"
+          example: 0.06917684
+        average:
+          type: number
+          description: "Average filling price"
+          example: 0.06917684
+        amount:
+          type: number
+          description: "Ordered amount in base currency"
+          example: 1.5
+        filled:
+          type: number
+          description: "Filled amount in base currency"
+          example: 1.1
+        remaining:
+          type: number
+          description: "Remaining amount to fill"
+          example: 0.4
+        cost:
+          type: number
+          description: "Filled * price (filling price used if available)"
+          example: 0.076094524
+        trades:
+          type: array
+          description: "List of trades associated with the order"
+          items:
+            type: object
+        fee:
+          type: object
+          description: "Fee information (if available)"
+          properties:
+            currency:
+              type: string
+              description: "Fee currency (usually quote)"
+              example: "BTC"
+            cost:
+              type: number
+              description: "Fee amount in currency"
+              example: 0.0009
+            rate:
+              type: number
+              description: "Fee rate (if available)"
+              example: 0.002
+
+    Balance:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          description: "Unix timestamp in milliseconds"
+          example: 1499280391811
+        free:
+          type: object
+          description: "Funds available for trading, by currency"
+          additionalProperties:
+            type: number
+          example:
+            BTC: 321.00
+            USD: 123.00
+        used:
+          type: object
+          description: "Funds on hold, by currency"
+          additionalProperties:
+            type: number
+          example:
+            BTC: 234.00
+            USD: 456.00
+        total:
+          type: object
+          description: "Total funds (free + used), by currency"
+          additionalProperties:
+            type: number
+          example:
+            BTC: 555.00
+            USD: 579.00
+        debt:
+          type: object
+          description: "Debt, by currency"
+          additionalProperties:
+            type: number
+          example:
+            BTC: 10.00
+            USD: 5.00
+
+    Ticker:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: "Market symbol, e.g., 'BTC/USD', 'ETH/BTC'"
+          example: "BTC/USD"
+        timestamp:
+          type: integer
+          description: "Unix timestamp in milliseconds"
+          example: 1504541580000
+        high:
+          type: number
+          description: "Highest price"
+          example: 4240.6
+        low:
+          type: number
+          description: "Lowest price"
+          example: 4230.0
+        bid:
+          type: number
+          description: "Current best bid (buy) price"
+          example: 4235.4
+        bidVolume:
+          type: number
+          description: "Best bid amount (optional)"
+          example: 5.0
+        ask:
+          type: number
+          description: "Current best ask (sell) price"
+          example: 4230.7
+        askVolume:
+          type: number
+          description: "Best ask amount (optional)"
+          example: 3.0
+        vwap:
+          type: number
+          description: "Volume-weighted average price"
+          example: 4235.0
+        open:
+          type: number
+          description: "Opening price"
+          example: 4235.4
+        close:
+          type: number
+          description: "Price of last trade (closing price)"
+          example: 4230.7
+        previousClose:
+          type: number
+          description: "Closing price for the previous period"
+          example: 4229.1
+        baseVolume:
+          type: number
+          description: "Base currency volume traded"
+          example: 1000.0
+        quoteVolume:
+          type: number
+          description: "Quote currency volume traded"
+          example: 4230000.0
+
+    LeverageTiers:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: object
+          properties:
+            tier:
+              type: integer
+              description: "Tier index"
+              example: 1
+            notionalCurrency:
+              type: string
+              description: "Currency for notional values"
+              example: "USDT"
+            minNotional:
+              type: number
+              description: "Lowest notional amount"
+              example: 0
+            maxNotional:
+              type: number
+              description: "Highest notional amount"
+              example: 10000
+            maintenanceMarginRate:
+              type: number
+              description: "Maintenance margin rate"
+              example: 0.0065
+            maxLeverage:
+              type: integer
+              description: "Maximum leverage for this tier"
+              example: 75
+
+    Leverage:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: "Market symbol"
+          example: "BTC/USDT"
+        longLeverage:
+          type: integer
+          description: "Leverage for long positions"
+          example: 100
+        shortLeverage:
+          type: integer
+          description: "Leverage for short positions"
+          example: 75
+
+    Trade:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Trade ID"
+          example: "12345-67890:09876/54321"
+        timestamp:
+          type: integer
+          description: "Unix timestamp in milliseconds"
+          example: 1502962946216
+        symbol:
+          type: string
+          description: "Symbol for the trading pair, e.g., 'ETH/BTC'"
+          example: "ETH/BTC"
+        order:
+          type: string
+          description: "Order ID associated with the trade"
+          example: "12345-67890:09876/54321"
+        type:
+          type: string
+          description: "Order type, e.g., 'market', 'limit'"
+          example: "limit"
+        side:
+          type: string
+          description: "'buy' or 'sell'"
+          example: "buy"
+        takerOrMaker:
+          type: string
+          description: "'taker' or 'maker'"
+          example: "taker"
+        price:
+          type: number
+          description: "Trade price in quote currency"
+          example: 0.06917684
+        amount:
+          type: number
+          description: "Amount in base currency"
+          example: 1.5
+        cost:
+          type: number
+          description: "Total cost, price * amount"
+          example: 0.10376526
+        fee:
+          type: object
+          description: "Fee details"
+          properties:
+            cost:
+              type: number
+              description: "Fee amount"
+              example: 0.0015
+            currency:
+              type: string
+              description: "Currency of fee, typically base for buys, quote for sells"
+              example: "ETH"
+            rate:
+              type: number
+              description: "Fee rate"
+              example: 0.002
+        fees:
+          type: array
+          description: "Array of fees if multiple currencies used"
+          items:
+            type: object
+            properties:
+              cost:
+                type: number
+                description: "Fee amount"
+                example: 0.0015
+              currency:
+                type: string
+                description: "Currency of fee"
+                example: "ETH"
+              rate:
+                type: number
+                description: "Fee rate (if available)"
+                example: 0.002
+
